@@ -179,39 +179,58 @@ function renderTable() {
 
     const quantityCell = document.createElement("td");
     quantityCell.className = "quantity-cell";
+    quantityCell.dataset.label = "Aantal / gewicht";
     quantityCell.append(makeInput(item.hoeveelheid, "hoeveelheid", "Aantal of gewicht"));
     row.append(quantityCell);
 
     const unitPriceCell = document.createElement("td");
+    unitPriceCell.className = "unit-price-cell";
+    unitPriceCell.dataset.label = "Eenheidsprijs";
     unitPriceCell.append(makeInput(item.eenheidsprijs, "eenheidsprijs", `Eenheidsprijs voor ${item.product || "product"}`));
     row.append(unitPriceCell);
 
     const grossCell = document.createElement("td");
+    grossCell.className = "gross-cell";
+    grossCell.dataset.label = "Bruto €";
     grossCell.append(makeInput(item.bruto, "bruto", `Bruto prijs voor ${item.product || "product"}`));
     row.append(grossCell);
 
     const discountCell = document.createElement("td");
+    discountCell.className = "discount-cell";
+    discountCell.dataset.label = "Korting €";
     discountCell.append(makeInput(item.korting, "korting", `Korting voor ${item.product || "product"}`));
     row.append(discountCell);
 
     const netCell = document.createElement("td");
     netCell.className = "net-cell";
+    netCell.dataset.label = "Netto";
     netCell.dataset.net = "";
     row.append(netCell);
 
+    const cardSpacer = document.createElement("td");
+    cardSpacer.className = "card-spacer";
+    row.append(cardSpacer);
+
     state.people.forEach((person) => {
       const cell = document.createElement("td");
-      cell.className = "checkbox-cell";
+      cell.className = "checkbox-cell person-cell";
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
       checkbox.checked = item.personen.includes(person);
       checkbox.dataset.person = person;
       checkbox.setAttribute("aria-label", `${person} betaalt mee voor ${item.product || "dit product"}`);
-      cell.append(checkbox);
+      const toggle = document.createElement("label");
+      toggle.className = "person-toggle";
+      if (checkbox.checked) toggle.classList.add("is-selected");
+      const name = document.createElement("span");
+      name.textContent = person;
+      toggle.append(checkbox, name);
+      cell.append(toggle);
       row.append(cell);
     });
 
     const deleteCell = document.createElement("td");
+    deleteCell.className = "delete-cell";
     const deleteButton = document.createElement("button");
     deleteButton.type = "button";
     deleteButton.className = "delete-row";
@@ -583,6 +602,7 @@ elements.rows.addEventListener("change", (event) => {
     item.personen = checkbox.checked
       ? [...new Set([...item.personen, person])]
       : item.personen.filter((name) => name !== person);
+    checkbox.closest(".person-toggle")?.classList.toggle("is-selected", checkbox.checked);
     updateTotals();
     return;
   }
