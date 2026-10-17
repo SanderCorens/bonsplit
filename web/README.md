@@ -1,6 +1,6 @@
 # BonSplit browserapp
 
-Deze losse statische webversie staat naast de bestaande Streamlit-app. De browserapp heeft geen Python-server nodig en kan op GitHub Pages worden gepubliceerd. PDF-tekst wordt lokaal gelezen met PDF.js; scans en afbeeldingen worden lokaal verwerkt met Tesseract.js en meegeleverde Nederlandse en Engelse taalmodellen.
+Dit is de actieve BonSplit-app. De oude Streamlit-versie is verouderd; de browserapp heeft geen Python-server nodig en kan op GitHub Pages worden gepubliceerd. De bonparser ondersteunt Colruyt- en Lidl-kassabonnen. PDF-tekst wordt lokaal gelezen met PDF.js; scans en afbeeldingen worden lokaal verwerkt met Tesseract.js en meegeleverde Nederlandse en Engelse taalmodellen. Controleer OCR-herkenning en bedragen altijd.
 
 ## Lokaal testen
 

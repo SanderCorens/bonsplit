@@ -1,6 +1,8 @@
 const PRODUCT_LINE_RE = /^\s*[AC]\s+(\d{3,6})\s+(.+?)\s+(\d+(?:[,.]\d+)?\s*kg|\d+)\s+(\d+[,.]\d{2,3})\s+(\d+[,.]\d{2})\s*$/i;
+const LIDL_PRODUCT_LINE_RE = /^\s*(.+?)\s+(\d+\s*[,.]\s*\d{2})\s+[A-Z]\s*$/i;
 const DISCOUNT_RE = /Korting\s+bon.*?(-\s*[\d.,]+)/i;
-const PAYABLE_RE = /Totaal betaald\s+€?\s*([\d.,]+)/i;
+const LIDL_DISCOUNT_RE = /^Lidl\s+Plus\s+(-?\s*\d+\s*[,.]\s*\d{2})\s*$/i;
+const PAYABLE_RE = /(?:Totaal betaald|Te betalen)\s+€?\s*([\d.,]+)/i;
 const XTRA_DISCOUNT_RE = /Totale korting met Xtra\s*:\s*€?\s*([\d.,]+)/i;
 const GOODS_RE = /TOTAAL\s+GOEDEREN/i;
 
@@ -83,6 +85,36 @@ export function parseReceipt(text) {
         });
       } catch {
         ignoredNotes.push(`Bedrag niet herkend: ${line}`);
+      }
+      continue;
+    }
+
+    const lidlProductMatch = line.match(LIDL_PRODUCT_LINE_RE);
+    if (lidlProductMatch) {
+      const [, product, bedrag] = lidlProductMatch;
+      try {
+        const cents = parseMoneyCents(bedrag.replace(/\s/g, ""));
+        items.push({
+          artikel: "",
+          product: product.trim(),
+          hoeveelheid: "1",
+          eenheidsprijs: bedrag.replace(/\s/g, ""),
+          brutoCents: cents,
+          kortingCents: 0,
+          personen: [],
+        });
+      } catch {
+        ignoredNotes.push(`Bedrag niet herkend: ${line}`);
+      }
+      continue;
+    }
+
+    const lidlDiscountMatch = line.match(LIDL_DISCOUNT_RE);
+    if (lidlDiscountMatch && items.length) {
+      try {
+        items.at(-1).kortingCents += Math.abs(parseMoneyCents(lidlDiscountMatch[1].replace(/\s/g, "")));
+      } catch {
+        ignoredNotes.push(`Korting niet herkend: ${line}`);
       }
       continue;
     }
