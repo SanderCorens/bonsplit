@@ -1,5 +1,5 @@
 import * as pdfjsLib from "./vendor/pdfjs/pdf.mjs";
-import { formatMoney, parseMoneyCents, parseReceipt, splitCents } from "./receipt.js";
+import { aggregateGroupTotals, formatMoney, parseMoneyCents, parseReceipt, splitCents } from "./receipt.js";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL("./vendor/pdfjs/pdf.worker.mjs", import.meta.url).href;
 
@@ -41,6 +41,8 @@ const elements = {
   emptyProducts: byId("empty-products"),
   addProduct: byId("add-product"),
   totals: byId("person-totals"),
+  groupTotals: byId("group-totals"),
+  groupTotalsEmpty: byId("group-totals-empty"),
   unassignedCount: byId("unassigned-count"),
   unassignedWarning: byId("unassigned-warning"),
   exportCsv: byId("export-csv"),
@@ -301,6 +303,21 @@ function updateTotals() {
     card.append(label, amount);
     elements.totals.append(card);
   });
+  const groups = aggregateGroupTotals(normalized, state.people);
+  elements.groupTotals.replaceChildren();
+  groups.forEach(({ participants, cents }) => {
+    const card = document.createElement("article");
+    card.className = "person-total-card";
+    const label = document.createElement("span");
+    label.textContent = participants.length > 1
+      ? `${participants.slice(0, -1).join(", ")} en ${participants.at(-1)}`
+      : participants[0];
+    const amount = document.createElement("strong");
+    amount.textContent = formatMoney(cents);
+    card.append(label, amount);
+    elements.groupTotals.append(card);
+  });
+  elements.groupTotalsEmpty.hidden = groups.length > 0;
 
   elements.unassignedCount.textContent = unassigned.length ? `${unassigned.length} niet toegewezen` : "Alle geldige regels toegewezen";
   elements.unassignedWarning.hidden = unassigned.length === 0 && invalid.length === 0;

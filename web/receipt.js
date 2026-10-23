@@ -1,8 +1,10 @@
 const PRODUCT_LINE_RE = /^\s*[AC]\s+(\d{3,6})\s+(.+?)\s+(\d+(?:[,.]\d+)?\s*kg|\d+)\s+(\d+[,.]\d{2,3})\s+(\d+[,.]\d{2})\s*$/i;
 const LIDL_PRODUCT_LINE_RE = /^\s*(.+?)\s+(\d+\s*[,.]\s*\d{2})\s+[A-Z]\s*$/i;
+const DELHAIZE_PRODUCT_LINE_RE = /^\s*(.+?)\s+(\d+\s*,\s*\d{2})\s*$/i;
 const DISCOUNT_RE = /Korting\s+bon.*?(-\s*[\d.,]+)/i;
 const LIDL_DISCOUNT_RE = /^Lidl\s+Plus\s+(-?\s*\d+\s*[,.]\s*\d{2})\s*$/i;
-const PAYABLE_RE = /(?:Totaal betaald|Te betalen)\s+€?\s*([\d.,]+)/i;
+const DELHAIZE_DISCOUNT_RE = /^NUTRI-BOOST\s+10%\s+(-\s*\d+\s*,\s*\d{2})\s*$/i;
+const PAYABLE_RE = /(?:Totaal betaald|Te betalen|Total:)\s+€?\s*([\d.,]+)/i;
 const XTRA_DISCOUNT_RE = /Totale korting met Xtra\s*:\s*€?\s*([\d.,]+)/i;
 const GOODS_RE = /TOTAAL\s+GOEDEREN/i;
 
@@ -51,6 +53,19 @@ export function splitCents(totalCents, peopleCount) {
   const base = Math.floor(absolute / peopleCount);
   const remainder = absolute % peopleCount;
   return Array.from({ length: peopleCount }, (_, index) => sign * (base + (index < remainder ? 1 : 0)));
+}
+
+export function aggregateGroupTotals(items, people) {
+  const groups = new Map();
+  items.forEach(({ selected, net }) => {
+    const participants = people.filter((person) => selected.includes(person));
+    if (!participants.length) return;
+    const key = JSON.stringify(participants);
+    const group = groups.get(key) ?? { participants, cents: 0 };
+    group.cents += net;
+    groups.set(key, group);
+  });
+  return [...groups.values()];
 }
 
 function extractTotal(text, pattern) {
@@ -109,6 +124,38 @@ export function parseReceipt(text) {
       continue;
     }
 
+    const delhaizeDiscountMatch = line.match(DELHAIZE_DISCOUNT_RE);
+    if (delhaizeDiscountMatch && items.length) {
+      const discountCents = Math.abs(parseMoneyCents(delhaizeDiscountMatch[1].replace(/\s/g, "")));
+      const discountedItem = [...items].reverse().find((item) => (
+        item.kortingCents === 0
+        && Math.abs(Math.round(item.brutoCents * 0.1) - discountCents) <= 1
+      ));
+      if (discountedItem) discountedItem.kortingCents += discountCents;
+      else ignoredNotes.push(`Korting niet gekoppeld: ${line}`);
+      continue;
+    }
+
+    const delhaizeProductMatch = line.match(DELHAIZE_PRODUCT_LINE_RE);
+    if (delhaizeProductMatch && !/^(?:TOTAAL|TERUG|KREDIETKAART)\b/i.test(line)) {
+      const [, product, bedrag] = delhaizeProductMatch;
+      try {
+        const normalizedAmount = bedrag.replace(/\s/g, "");
+        items.push({
+          artikel: "",
+          product: product.trim(),
+          hoeveelheid: "1",
+          eenheidsprijs: normalizedAmount,
+          brutoCents: parseMoneyCents(normalizedAmount),
+          kortingCents: 0,
+          personen: [],
+        });
+      } catch {
+        ignoredNotes.push(`Bedrag niet herkend: ${line}`);
+      }
+      continue;
+    }
+
     const lidlDiscountMatch = line.match(LIDL_DISCOUNT_RE);
     if (lidlDiscountMatch && items.length) {
       try {
@@ -133,8 +180,18 @@ export function parseReceipt(text) {
 
   let goederenCents = null;
   const normalizedLines = lines.map((line) => line.replace(/\s+/g, " ").trim());
+  const delhaizeTotals = normalizedLines
+    .map((line) => line.match(/^TOTAAL\s+([\d.,]+)$/i)?.[1])
+    .filter(Boolean);
+  if (delhaizeTotals.length >= 2) {
+    try {
+      goederenCents = parseMoneyCents(delhaizeTotals[0]);
+    } catch {
+      goederenCents = null;
+    }
+  }
   const goodsIndex = normalizedLines.findIndex((line) => GOODS_RE.test(line));
-  if (goodsIndex >= 0) {
+  if (goederenCents === null && goodsIndex >= 0) {
     for (const totalLine of normalizedLines.slice(goodsIndex + 1, goodsIndex + 3)) {
       const euroAmounts = [...totalLine.matchAll(/€\s*([\d.,]+)/g)];
       if (euroAmounts.length >= 2) {

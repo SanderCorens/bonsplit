@@ -118,6 +118,7 @@ td.checkbox-cell input { width: 18px; height: 18px; accent-color: var(--green); 
 .delete-row:hover { color: var(--red); background: var(--red-soft); }
 .empty-state { padding: 30px 10px; color: var(--muted); text-align: center; font-size: 13px; }
 .totals-section { margin-top: 34px; }
+.group-totals-section { margin-top: 26px; }
 .totals-heading { align-items: flex-end; margin-bottom: 15px; }
 .person-totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
 .person-total-card { padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
