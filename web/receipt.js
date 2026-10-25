@@ -1,10 +1,11 @@
 const PRODUCT_LINE_RE = /^\s*[AC]\s+(\d{3,6})\s+(.+?)\s+(\d+(?:[,.]\d+)?\s*kg|\d+)\s+(\d+[,.]\d{2,3})\s+(\d+[,.]\d{2})\s*$/i;
 const LIDL_PRODUCT_LINE_RE = /^\s*(.+?)\s+(\d+\s*[,.]\s*\d{2})\s+[A-Z]\s*$/i;
 const DELHAIZE_PRODUCT_LINE_RE = /^\s*(.+?)\s+(\d+\s*,\s*\d{2})\s*$/i;
+const DELHAIZE_NON_PRODUCT_LINE_RE = /^(?:TOTAAL|TOTALE|TERUG|KREDIETKAART|TE BETALEN|TOTAL|FOOD INC)\b/i;
 const DISCOUNT_RE = /Korting\s+bon.*?(-\s*[\d.,]+)/i;
 const LIDL_DISCOUNT_RE = /^Lidl\s+Plus\s+(-?\s*\d+\s*[,.]\s*\d{2})\s*$/i;
 const DELHAIZE_DISCOUNT_RE = /^NUTRI-BOOST\s+10%\s+(-\s*\d+\s*,\s*\d{2})\s*$/i;
-const PAYABLE_RE = /(?:Totaal betaald|Te betalen|Total:)\s+€?\s*([\d.,]+)/i;
+const PAYABLE_RE = /(?:Totaal betaald|Te betalen|Total:)[ \t]+€?[ \t]*([\d.,]+)/i;
 const XTRA_DISCOUNT_RE = /Totale korting met Xtra\s*:\s*€?\s*([\d.,]+)/i;
 const GOODS_RE = /TOTAAL\s+GOEDEREN/i;
 
@@ -78,14 +79,17 @@ function extractTotal(text, pattern) {
   }
 }
 
-export function parseReceipt(text) {
+export function parseReceipt(text, store = "auto") {
+  const parseColruyt = store === "auto" || store === "colruyt";
+  const parseLidl = store === "auto" || store === "lidl";
+  const parseDelhaize = store === "auto" || store === "delhaize";
   const lines = String(text).split(/\r?\n/);
   const items = [];
   const ignoredNotes = [];
 
   for (const rawLine of lines) {
     const line = rawLine.replace(/\s+/g, " ").trim();
-    const match = line.match(PRODUCT_LINE_RE);
+    const match = parseColruyt ? line.match(PRODUCT_LINE_RE) : null;
     if (match) {
       const [, artikel, product, hoeveelheid, eenheidsprijs, bedrag] = match;
       try {
@@ -104,7 +108,7 @@ export function parseReceipt(text) {
       continue;
     }
 
-    const lidlProductMatch = line.match(LIDL_PRODUCT_LINE_RE);
+    const lidlProductMatch = parseLidl ? line.match(LIDL_PRODUCT_LINE_RE) : null;
     if (lidlProductMatch) {
       const [, product, bedrag] = lidlProductMatch;
       try {
@@ -124,7 +128,7 @@ export function parseReceipt(text) {
       continue;
     }
 
-    const delhaizeDiscountMatch = line.match(DELHAIZE_DISCOUNT_RE);
+    const delhaizeDiscountMatch = parseDelhaize ? line.match(DELHAIZE_DISCOUNT_RE) : null;
     if (delhaizeDiscountMatch && items.length) {
       const discountCents = Math.abs(parseMoneyCents(delhaizeDiscountMatch[1].replace(/\s/g, "")));
       const discountedItem = [...items].reverse().find((item) => (
@@ -136,8 +140,10 @@ export function parseReceipt(text) {
       continue;
     }
 
-    const delhaizeProductMatch = line.match(DELHAIZE_PRODUCT_LINE_RE);
-    if (delhaizeProductMatch && !/^(?:TOTAAL|TERUG|KREDIETKAART)\b/i.test(line)) {
+    const delhaizeProductMatch = parseDelhaize && !line.includes("€") && !PRODUCT_LINE_RE.test(line)
+      ? line.match(DELHAIZE_PRODUCT_LINE_RE)
+      : null;
+    if (delhaizeProductMatch && !DELHAIZE_NON_PRODUCT_LINE_RE.test(line)) {
       const [, product, bedrag] = delhaizeProductMatch;
       try {
         const normalizedAmount = bedrag.replace(/\s/g, "");
@@ -156,7 +162,7 @@ export function parseReceipt(text) {
       continue;
     }
 
-    const lidlDiscountMatch = line.match(LIDL_DISCOUNT_RE);
+    const lidlDiscountMatch = parseLidl ? line.match(LIDL_DISCOUNT_RE) : null;
     if (lidlDiscountMatch && items.length) {
       try {
         items.at(-1).kortingCents += Math.abs(parseMoneyCents(lidlDiscountMatch[1].replace(/\s/g, "")));
@@ -166,7 +172,7 @@ export function parseReceipt(text) {
       continue;
     }
 
-    const discountMatch = line.match(DISCOUNT_RE);
+    const discountMatch = parseColruyt ? line.match(DISCOUNT_RE) : null;
     if (discountMatch && items.length) {
       try {
         items.at(-1).kortingCents += Math.abs(parseMoneyCents(discountMatch[1].replace(/\s/g, "")));
@@ -180,7 +186,7 @@ export function parseReceipt(text) {
 
   let goederenCents = null;
   const normalizedLines = lines.map((line) => line.replace(/\s+/g, " ").trim());
-  const delhaizeTotals = normalizedLines
+  const delhaizeTotals = (parseDelhaize ? normalizedLines : [])
     .map((line) => line.match(/^TOTAAL\s+([\d.,]+)$/i)?.[1])
     .filter(Boolean);
   if (delhaizeTotals.length >= 2) {
@@ -190,7 +196,7 @@ export function parseReceipt(text) {
       goederenCents = null;
     }
   }
-  const goodsIndex = normalizedLines.findIndex((line) => GOODS_RE.test(line));
+  const goodsIndex = parseColruyt ? normalizedLines.findIndex((line) => GOODS_RE.test(line)) : -1;
   if (goederenCents === null && goodsIndex >= 0) {
     for (const totalLine of normalizedLines.slice(goodsIndex + 1, goodsIndex + 3)) {
       const euroAmounts = [...totalLine.matchAll(/€\s*([\d.,]+)/g)];

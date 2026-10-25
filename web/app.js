@@ -19,6 +19,7 @@ const state = {
 const elements = {
   launchWarning: byId("launch-warning"),
   file: byId("receipt-file"),
+  store: byId("receipt-store"),
   dropzone: byId("dropzone"),
   selectedFile: byId("selected-file"),
   status: byId("processing-status"),
@@ -450,6 +451,11 @@ function fromParsedReceipt(parsed, text, method) {
 
 async function processFile(file) {
   if (!file) return;
+  const store = elements.store.value;
+  if (!store) {
+    setStatus("Kies eerst de winkel van de kassabon.");
+    return;
+  }
   const extension = file.name.split(".").pop().toLowerCase();
   if (!(["pdf", "png", "jpg", "jpeg"].includes(extension))) {
     setStatus("Kies een PDF-, JPG- of PNG-bestand.");
@@ -457,6 +463,7 @@ async function processFile(file) {
   }
   elements.selectedFile.textContent = file.name;
   elements.file.disabled = true;
+  elements.store.disabled = true;
   state.items = [];
   state.receiptText = "";
   state.recognized = false;
@@ -472,20 +479,20 @@ async function processFile(file) {
       const extracted = await extractPdfText(file);
       cleanupPdf = extracted.cleanup;
       text = extracted.text;
-      let parsed = parseReceipt(text);
+      let parsed = parseReceipt(text, store);
       if (text.replace(/\s/g, "").length < 100 || parsed.items.length === 0) {
         text = await ocrPdf(extracted.document);
         method = "Lokale Tesseract-OCR op gescande PDF-pagina's";
-        parsed = parseReceipt(text);
+        parsed = parseReceipt(text, store);
       } else {
         method = "PDF-tekst lokaal uitgelezen (OCR niet nodig)";
       }
-      fromParsedReceipt(parsed, text, method);
+      fromParsedReceipt(parsed, text, `${elements.store.selectedOptions[0].text} · ${method}`);
     } else {
       setStatus("Lokale OCR op de afbeelding starten…", 4);
       text = await recognizeImage(file);
       method = "Lokale Tesseract-OCR op afbeelding";
-      fromParsedReceipt(parseReceipt(text), text, method);
+      fromParsedReceipt(parseReceipt(text, store), text, `${elements.store.selectedOptions[0].text} · ${method}`);
     }
     if (!state.items.length) {
       setStatus("Tekst gelezen, maar geen productregels herkend. Bekijk de tekst of voeg regels handmatig toe.");
@@ -508,6 +515,7 @@ async function processFile(file) {
       state.tesseractWorkerPromise = null;
     }
     elements.file.disabled = false;
+    elements.store.disabled = false;
     elements.file.value = "";
   }
 }
@@ -572,6 +580,10 @@ function exportCsv() {
 }
 
 elements.file.addEventListener("change", (event) => processFile(event.target.files?.[0]));
+elements.store.addEventListener("change", () => {
+  elements.file.disabled = !elements.store.value;
+  if (elements.store.value) elements.status.hidden = true;
+});
 elements.dropzone.addEventListener("dragover", (event) => { event.preventDefault(); elements.dropzone.classList.add("dragging"); });
 elements.dropzone.addEventListener("dragleave", () => elements.dropzone.classList.remove("dragging"));
 elements.dropzone.addEventListener("drop", (event) => {

@@ -43,12 +43,21 @@
           <strong>Start de webapp via localhost</strong>
           <span>Rechtstreeks openen als <code>file://</code> blokkeert JavaScript-modules en de PDF/OCR-workers. Open Terminal in de projectmap, start <code>python3 -m http.server 8000 --directory web</code> en ga naar <code>http://localhost:8000</code>.</span>
         </div>
+        <div class="store-picker">
+          <label for="receipt-store">Van welke winkel is de bon?</label>
+          <select id="receipt-store" required>
+            <option value="">Kies een winkel</option>
+            <option value="colruyt">Colruyt</option>
+            <option value="lidl">Lidl</option>
+            <option value="delhaize">Delhaize</option>
+          </select>
+        </div>
         <label class="dropzone" id="dropzone" for="receipt-file">
           <span class="upload-icon" aria-hidden="true">↑</span>
           <span class="dropzone-title">Tik om een bestand te kiezen</span>
           <span class="dropzone-copy">of sleep je kassabon hierheen</span>
           <span class="dropzone-file" id="selected-file">Nog geen bestand gekozen</span>
-          <input id="receipt-file" type="file" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png">
+          <input id="receipt-file" type="file" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png" disabled>
         </label>
         <div id="processing-status" class="status" role="status" aria-live="polite" hidden>
           <div class="status-line"><span id="status-message">Bon wordt lokaal verwerkt…</span><span id="status-percent"></span></div>
@@ -142,7 +151,7 @@
         <div class="welcome-icon" aria-hidden="true">✳</div>
         <div>
           <h2>Begin met je eerste bon</h2>
-          <p>BonSplit herkent Colruyt-, Lidl- en Delhaize-productregels. Controleer altijd de prijzen en kortingen vóór je exporteert.</p>
+          <p>Kies eerst de winkel van je bon. Controleer altijd de herkende prijzen en kortingen vóór je exporteert.</p>
         </div>
       </section>
     </main>

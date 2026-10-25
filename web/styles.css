@@ -51,8 +51,12 @@ h3 { margin-bottom: 5px; font-size: 17px; }
 .file-types { color: var(--muted); font-size: 12px; font-weight: 600; }
 .launch-warning { display: grid; gap: 6px; margin: 0 0 16px; padding: 12px 14px; border: 1px solid #ead7a6; border-radius: 11px; background: var(--amber-soft); color: var(--amber); font-size: 12px; line-height: 1.55; }
 .launch-warning code { padding: 1px 4px; border-radius: 4px; background: rgb(255 255 255 / 70%); font-size: 11px; }
+.store-picker { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(180px, 260px); align-items: center; gap: 16px; margin: 0 0 14px; color: var(--ink); font-size: 13px; font-weight: 700; }
+.store-picker select { width: 100%; min-height: 42px; padding: 8px 36px 8px 11px; border: 1px solid #d8e0d8; border-radius: 9px; background: white; color: var(--ink); font: inherit; }
+.store-picker select:focus { outline: 3px solid rgb(52 127 82 / 15%); border-color: #6b9c78; }
 .dropzone { position: relative; display: flex; min-height: 190px; flex-direction: column; justify-content: center; align-items: center; gap: 7px; padding: 26px; border: 1.5px dashed #b9cbbd; border-radius: 14px; background: #fbfcfa; text-align: center; cursor: pointer; transition: background .18s ease, border-color .18s ease; }
 .dropzone:hover, .dropzone.dragging { border-color: var(--green); background: #f1f7f1; }
+.dropzone:has(input:disabled) { cursor: not-allowed; opacity: .62; }
 .dropzone input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .upload-icon { width: 38px; height: 38px; display: grid; place-items: center; margin-bottom: 3px; border-radius: 12px; color: var(--green); background: var(--green-soft); font-size: 23px; font-weight: 600; }
 .dropzone-title { font-weight: 700; }
@@ -143,6 +147,7 @@ td.checkbox-cell input { width: 18px; height: 18px; accent-color: var(--green); 
   .intro { margin-bottom: 22px; }
   .intro-copy { font-size: 14px; }
   .upload-panel, .people-panel, .products-panel { padding: 17px; border-radius: 15px; }
+  .store-picker { grid-template-columns: 1fr; gap: 7px; }
   .dropzone { min-height: 165px; padding: 20px 12px; }
   .result-heading { margin-top: 34px; align-items: flex-start; }
   .result-actions { flex-direction: column-reverse; align-items: flex-end; }
